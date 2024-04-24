@@ -4,8 +4,11 @@
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 const int CELL_SIZE = 10;
+bool isStartHovered = false;
+bool isExitHovered = false;
 
-Game::Game() : m_window(nullptr), m_renderer(nullptr), m_isRunning(false), m_snake(WINDOW_WIDTH / CELL_SIZE, WINDOW_HEIGHT / CELL_SIZE), m_food{} {}
+
+Game::Game() : m_window(nullptr), m_renderer(nullptr), m_isRunning(false), m_snake(WINDOW_WIDTH / CELL_SIZE, WINDOW_HEIGHT / CELL_SIZE), m_food{}, m_inMainMenu(true), font(nullptr) {}
 
 Game::~Game() {
     cleanup();
@@ -18,6 +21,18 @@ bool compareSDLPoint(const SDL_Point& a, const SDL_Point& b) {
 void Game::initialize() {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
+        return;
+    }
+
+    if (TTF_Init() == -1) {
+        std::cerr << "Failed to initialize SDL_ttf: " << TTF_GetError() << std::endl;
+        return;
+    }
+
+    font = TTF_OpenFont("Assets/Arial.ttf", 24);
+    if (!font) {
+        std::cerr << "Failed to load font: " << TTF_GetError() << std::endl;
+        cleanup();
         return;
     }
 
@@ -46,15 +61,55 @@ void Game::processInput() {
             m_isRunning = false;
             break;
         case SDL_KEYDOWN:
-            m_snake.setDirection(event.key.keysym.sym);
-            if (event.key.keysym.sym == SDLK_ESCAPE)
+            if (m_inMainMenu && event.key.keysym.sym == SDLK_RETURN) {
+                startGame();
+            }
+            else if (!m_inMainMenu && event.key.keysym.sym == SDLK_ESCAPE) {
                 m_isRunning = false;
+            }
+            else {
+                m_snake.setDirection(event.key.keysym.sym);
+            }
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            if (m_inMainMenu) {
+                int mouseX, mouseY;
+                SDL_GetMouseState(&mouseX, &mouseY);
+                if (mouseX >= WINDOW_WIDTH / 2 - 100 && mouseX <= WINDOW_WIDTH / 2 + 100 &&
+                    mouseY >= WINDOW_HEIGHT / 2 - 50 && mouseY <= WINDOW_HEIGHT / 2) {
+                    startGame();
+                }
+                else if (mouseX >= WINDOW_WIDTH / 2 - 100 && mouseX <= WINDOW_WIDTH / 2 + 100 &&
+                    mouseY >= WINDOW_HEIGHT / 2 && mouseY <= WINDOW_HEIGHT / 2 + 50) {
+                    m_isRunning = false;
+                }
+            }
+            break;
+        case SDL_MOUSEMOTION:
+            int mouseX, mouseY;
+            SDL_GetMouseState(&mouseX, &mouseY);
+            if (mouseX >= WINDOW_WIDTH / 2 - 100 && mouseX <= WINDOW_WIDTH / 2 + 100 &&
+                mouseY >= WINDOW_HEIGHT / 2 - 50 && mouseY <= WINDOW_HEIGHT / 2) {
+                isStartHovered = true;
+            }
+            else {
+                isStartHovered = false;
+            }
+            if (mouseX >= WINDOW_WIDTH / 2 - 100 && mouseX <= WINDOW_WIDTH / 2 + 100 &&
+                mouseY >= WINDOW_HEIGHT / 2 && mouseY <= WINDOW_HEIGHT / 2 + 50) {
+                isExitHovered = true;
+            }
+            else {
+                isExitHovered = false;
+            }
             break;
         default:
             break;
         }
     }
 }
+
+
 
 void Game::update() {
     if (m_snake.checkCollision()) {
@@ -93,6 +148,11 @@ void Game::render() {
 }
 
 void Game::cleanup() {
+    if (font) {
+        TTF_CloseFont(font);
+        font = nullptr;
+    }
+
     if (m_renderer) {
         SDL_DestroyRenderer(m_renderer);
         m_renderer = nullptr;
@@ -108,17 +168,22 @@ void Game::cleanup() {
 void Game::run() {
     const int TARGET_FPS = 5;
     const int FRAME_DELAY = 1000 / TARGET_FPS;
-    initialize();
-
     Uint32 frameStart;
     int frameTime;
+
+    initialize();
 
     while (m_isRunning) {
         frameStart = SDL_GetTicks();
 
         processInput();
-        update();
-        render();
+        if (m_inMainMenu) {
+            showMainMenu();
+        }
+        else {
+            update();
+            render();
+        }
 
         frameTime = SDL_GetTicks() - frameStart;
 
@@ -135,4 +200,33 @@ void Game::spawnFood() {
     int y = rand() % (WINDOW_HEIGHT / CELL_SIZE);
     m_food.x = x;
     m_food.y = y;
+}
+
+void Game::showMainMenu() {
+    m_inMainMenu = true;
+
+    SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 255);
+    SDL_RenderClear(m_renderer);
+
+    SDL_Color startColor = isStartHovered ? SDL_Color{ 255, 255, 0, 255 } : SDL_Color{ 255, 255, 255, 255 };
+    SDL_Surface* startSurface = TTF_RenderText_Solid(font, "Start Game", startColor);
+    SDL_Texture* startTexture = SDL_CreateTextureFromSurface(m_renderer, startSurface);
+    SDL_Rect startRect = { WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 25, startSurface->w, startSurface->h };
+    SDL_RenderCopy(m_renderer, startTexture, NULL, &startRect);
+    SDL_DestroyTexture(startTexture);
+    SDL_FreeSurface(startSurface);
+
+    SDL_Color exitColor = isExitHovered ? SDL_Color{ 255, 255, 0, 255 } : SDL_Color{ 255, 255, 255, 255 };
+    SDL_Surface* exitSurface = TTF_RenderText_Solid(font, "Exit", exitColor);
+    SDL_Texture* exitTexture = SDL_CreateTextureFromSurface(m_renderer, exitSurface);
+    SDL_Rect exitRect = { WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 25, exitSurface->w, exitSurface->h };
+    SDL_RenderCopy(m_renderer, exitTexture, NULL, &exitRect);
+    SDL_DestroyTexture(exitTexture);
+    SDL_FreeSurface(exitSurface);
+
+    SDL_RenderPresent(m_renderer);
+}
+
+void Game::startGame() {
+    m_inMainMenu = false;
 }
