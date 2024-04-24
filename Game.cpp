@@ -1,7 +1,11 @@
 #include "Game.h"
 #include <iostream>
 
-Game::Game() : m_window(nullptr), m_renderer(nullptr), m_isRunning(false), m_snake(800 / 10, 600 / 10), m_food{} {}
+const int WINDOW_WIDTH = 800;
+const int WINDOW_HEIGHT = 600;
+const int CELL_SIZE = 10;
+
+Game::Game() : m_window(nullptr), m_renderer(nullptr), m_isRunning(false), m_snake(WINDOW_WIDTH / CELL_SIZE, WINDOW_HEIGHT / CELL_SIZE), m_food{} {}
 
 Game::~Game() {
     cleanup();
@@ -17,7 +21,7 @@ void Game::initialize() {
         return;
     }
 
-    m_window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, 0);
+    m_window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     if (!m_window) {
         std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
         cleanup();
@@ -119,8 +123,8 @@ void Game::run() {
 }
 
 void Game::spawnFood() {
-    int x = rand() % (800 / 10);
-    int y = rand() % (600 / 10);
+    int x = rand() % (WINDOW_WIDTH / CELL_SIZE);
+    int y = rand() % (WINDOW_HEIGHT / CELL_SIZE);
     m_food.x = x;
     m_food.y = y;
 }
