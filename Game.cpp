@@ -75,10 +75,18 @@ void Game::render() {
     SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 255);
     SDL_RenderClear(m_renderer);
 
+    SDL_SetRenderDrawColor(m_renderer, 100, 100, 100, 100);
+    for (int x = 0; x <= WINDOW_WIDTH; x += CELL_SIZE) {
+        SDL_RenderDrawLine(m_renderer, x, 0, x, WINDOW_HEIGHT);
+    }
+    for (int y = 0; y <= WINDOW_HEIGHT; y += CELL_SIZE) {
+        SDL_RenderDrawLine(m_renderer, 0, y, WINDOW_WIDTH, y);
+    }
+
     m_snake.render(m_renderer);
 
     SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
-    SDL_Rect foodRect{ m_food.x * 10, m_food.y * 10, 10, 10 };
+    SDL_Rect foodRect{ m_food.x * CELL_SIZE, m_food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE };
     SDL_RenderFillRect(m_renderer, &foodRect);
 
     SDL_RenderPresent(m_renderer);
